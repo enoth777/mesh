@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Coordinate Grid</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(127, 1fr);
+            grid-template-rows: repeat(127, 1fr);
+            width: 90vw; /* Adjust for mobile */
+            height: 90vw; /* Maintain square aspect ratio */
+            max-width: 500px; /* Limit to max width of 500px */
+            max-height: 500px; /* Limit to max height of 500px */
+            position: relative;
+            touch-action: none; /* Prevent default touch behavior */
+        }
+
+        .cell {
+            width: 100%;
+            height: 100%;
+            background-color: #e0e0e0;
+            transition: background-color 0.3s;
+        }
+
+        /* Darker cells near the center */
+        .cell[data-x="0"][data-y="0"] {
+            background-color: #555;
+        }
+        .cell[data-x="0"]:not([data-y="0"]),
+        .cell[data-y="0"]:not([data-x="0"]) {
+            background-color: #bbb;
+        }
+
+        .cell[data-x="0"][data-y="0"]:hover {
+            background-color: #333;
+        }
+
+        .info {
+            position: fixed;
+            bottom: 20px;
+            font-size: 18px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 10;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+    </style>
+</head>
+<body>
+
+<div class="grid-container" id="grid"></div>
+<div class="info" id="info">Coordinates: (0, 0)</div>
+
+<script>
+    const gridSize = 127;
+    const grid = document.getElementById("grid");
+    const info = document.getElementById("info");
+
+    // Create the grid dynamically
+    for (let y = -Math.floor(gridSize / 2); y <= Math.floor(gridSize / 2); y++) {
+        for (let x = -Math.floor(gridSize / 2); x <= Math.floor(gridSize / 2); x++) {
+            const cell = document.createElement("div");
+            cell.classList.add("cell");
+            cell.dataset.x = x;
+            cell.dataset.y = y;
+
+            // Darker cells near the center
+            const distance = Math.abs(x) + Math.abs(y);
+            const colorIntensity = Math.min(255, 255 - (distance * 20)); // 255 is light, 0 is dark
+            cell.style.backgroundColor = `rgb(${colorIntensity}, ${colorIntensity}, ${colorIntensity})`;
+
+            grid.appendChild(cell);
+        }
+    }
+
+    // Get the cell at a specific position
+    function getCellAt(x, y) {
+        const cells = grid.querySelectorAll('.cell');
+        return Array.from(cells).find(cell => cell.dataset.x == x && cell.dataset.y == y);
+    }
+
+    // Update coordinates based on position over the grid
+    function updateCoordinates(e) {
+        const rect = grid.getBoundingClientRect();
+        const x = e.clientX - rect.left; // Get mouse x relative to the grid
+        const y = e.clientY - rect.top;  // Get mouse y relative to the grid
+
+        // Normalize position to grid cells (127x127 grid with center at (0,0))
+        const cellSize = rect.width / gridSize;
+        const coordX = Math.round((x / cellSize) - (gridSize / 2));
+        const coordY = Math.round((y / cellSize) - (gridSize / 2));
+
+        // Find the corresponding cell
+        const cell = getCellAt(coordX, coordY);
+
+        // Update the coordinate display
+        info.textContent = `Coordinates: (${coordX}, ${coordY})`;
+    }
+
+    // Add real-time mousemove and touchmove event listeners
+    grid.addEventListener('mousemove', updateCoordinates);
+    grid.addEventListener('touchmove', (e) => {
+        e.preventDefault(); // Prevent scrolling when touching
+        updateCoordinates(e.touches[0]);
+    });
+
+</script>
+
+</body>
+</html>
