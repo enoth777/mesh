@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Coordinate Grid</title>
+    <title>Interactive Coordinate Grid with MQTT</title>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
         body {
             margin: 0;
@@ -20,12 +21,12 @@
             display: grid;
             grid-template-columns: repeat(127, 1fr);
             grid-template-rows: repeat(127, 1fr);
-            width: 90vw; /* Adjust for mobile */
-            height: 90vw; /* Maintain square aspect ratio */
-            max-width: 500px; /* Limit to max width of 500px */
-            max-height: 500px; /* Limit to max height of 500px */
+            width: 90vw;
+            height: 90vw;
+            max-width: 500px;
+            max-height: 500px;
             position: relative;
-            touch-action: none; /* Prevent default touch behavior */
+            touch-action: none;
         }
 
         .cell {
@@ -35,17 +36,8 @@
             transition: background-color 0.3s;
         }
 
-        /* Darker cells near the center */
-        .cell[data-x="0"][data-y="0"] {
-            background-color: #555;
-        }
-        .cell[data-x="0"]:not([data-y="0"]),
-        .cell[data-y="0"]:not([data-x="0"]) {
-            background-color: #bbb;
-        }
-
-        .cell[data-x="0"][data-y="0"]:hover {
-            background-color: #333;
+        .active {
+            background-color: #FF0000;
         }
 
         .info {
@@ -56,70 +48,82 @@
             color: white;
             padding: 10px;
             border-radius: 5px;
-            z-index: 10;
             left: 50%;
             transform: translateX(-50%);
+            z-index: 10;
         }
     </style>
 </head>
 <body>
 
 <div class="grid-container" id="grid"></div>
-<div class="info" id="info">Coordinates: (0, 0)</div>
+<div class="info" id="info">Waiting for coordinates...</div>
 
 <script>
     const gridSize = 127;
     const grid = document.getElementById("grid");
     const info = document.getElementById("info");
 
+    function logMessage(message) {
+        console.log(message);
+        info.textContent = message;
+    }
+
+    function connectMQTT() {
+        logMessage("Connecting to HiveMQ Cloud...");
+
+        const brokerUrl = "2557a86661894ebd8ac6bd385c47461d.s1.eu.hivemq.cloud:8884/mqtt";
+        const client = mqtt.connect(brokerUrl, {
+            username: "mesh0   ",
+            password: "123456aA"
+        });
+
+        client.on("connect", () => {
+            logMessage("Connected to HiveMQ Cloud");
+            client.subscribe("coordinates");
+        });
+
+        client.on("message", (topic, message) => {
+            const coords = message.toString().split(",");
+            const x = parseInt(coords[0]);
+            const y = parseInt(coords[1]);
+            logMessage(`Received coordinates: (${x}, ${y})`);
+            updateGrid(x, y);
+        });
+
+        client.on("error", (err) => {
+            logMessage("MQTT connection error: " + err);
+        });
+
+        client.on("offline", () => {
+            logMessage("MQTT client went offline");
+        });
+    }
+
+    function updateGrid(x, y) {
+        const cells = grid.querySelectorAll('.cell');
+        cells.forEach(cell => {
+            if (parseInt(cell.dataset.x) === x && parseInt(cell.dataset.y) === y) {
+                cell.classList.add("active");
+            } else {
+                cell.classList.remove("active");
+            }
+        });
+        logMessage(`Coordinates: (${x}, ${y})`);
+    }
+
     // Create the grid dynamically
-    for (let y = -Math.floor(gridSize / 2); y <= Math.floor(gridSize / 2); y++) {
-        for (let x = -Math.floor(gridSize / 2); x <= Math.floor(gridSize / 2); x++) {
+    for (let y = -63; y <= 63; y++) {
+        for (let x = -63; x <= 63; x++) {
             const cell = document.createElement("div");
             cell.classList.add("cell");
             cell.dataset.x = x;
             cell.dataset.y = y;
-
-            // Darker cells near the center
-            const distance = Math.abs(x) + Math.abs(y);
-            const colorIntensity = Math.min(255, 255 - (distance * 20)); // 255 is light, 0 is dark
-            cell.style.backgroundColor = `rgb(${colorIntensity}, ${colorIntensity}, ${colorIntensity})`;
-
             grid.appendChild(cell);
         }
     }
 
-    // Get the cell at a specific position
-    function getCellAt(x, y) {
-        const cells = grid.querySelectorAll('.cell');
-        return Array.from(cells).find(cell => cell.dataset.x == x && cell.dataset.y == y);
-    }
-
-    // Update coordinates based on position over the grid
-    function updateCoordinates(e) {
-        const rect = grid.getBoundingClientRect();
-        const x = e.clientX - rect.left; // Get mouse x relative to the grid
-        const y = e.clientY - rect.top;  // Get mouse y relative to the grid
-
-        // Normalize position to grid cells (127x127 grid with center at (0,0))
-        const cellSize = rect.width / gridSize;
-        const coordX = Math.round((x / cellSize) - (gridSize / 2));
-        const coordY = Math.round((y / cellSize) - (gridSize / 2));
-
-        // Find the corresponding cell
-        const cell = getCellAt(coordX, coordY);
-
-        // Update the coordinate display
-        info.textContent = `Coordinates: (${coordX}, ${coordY})`;
-    }
-
-    // Add real-time mousemove and touchmove event listeners
-    grid.addEventListener('mousemove', updateCoordinates);
-    grid.addEventListener('touchmove', (e) => {
-        e.preventDefault(); // Prevent scrolling when touching
-        updateCoordinates(e.touches[0]);
-    });
-
+    connectMQTT();
 </script>
 
 </body>
