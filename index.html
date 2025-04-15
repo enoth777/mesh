@@ -188,22 +188,24 @@
       document.getElementById("status").textContent = "Connected!";
       client.subscribe("mesh/coords");
     });
-
-    let connectedOnce = false;
-
-    client.on('connect', () => {
-      if (!connectedOnce) {
-        document.getElementById("status").textContent = "Connected!";
-        connectedOnce = true;
-      }
-      client.subscribe("mesh/coords");
+    
+    client.on('reconnect', () => {
+      document.getElementById("status").textContent = "Reconnecting...";
     });
-  
-
-    client.on('error', err => {
-      document.getElementById("status").textContent = "MQTT Error";
-      console.error(err);
+    
+    client.on('close', () => {
+      document.getElementById("status").textContent = "Disconnected";
     });
+    
+    client.on('error', (err) => {
+      console.error("MQTT error:", err);
+      document.getElementById("status").textContent = "Error: " + err.message;
+    });
+
+    client.on('offline', () => {
+      console.log("MQTT client is offline");
+    });
+
   </script>
 </body>
 </html>
