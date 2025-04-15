@@ -5,38 +5,73 @@
   <title>enoth.mesh</title>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
-    body { font-family: sans-serif; text-align: center; background: #f4f4f4; }
-    .grid { display: grid; grid-template-columns: repeat(10, 30px); grid-gap: 5px; margin: 50px auto; width: max-content; }
-    .cell { width: 30px; height: 30px; background: #ccc; border-radius: 5px; }
-    .active { background: #4caf50; }
+    body {
+      font-family: sans-serif;
+      background: #f0f0f0;
+      text-align: center;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(127, 6px);
+      grid-gap: 1px;
+      margin: 20px auto;
+      width: fit-content;
+      border: 1px solid #ccc;
+    }
+    .cell {
+      width: 6px;
+      height: 6px;
+      background: #ccc;
+    }
+    .axis {
+      background: #333 !important;
+    }
+    .active {
+      background: #4caf50 !important;
+    }
   </style>
 </head>
 <body>
-  <h2>MQTT XY Matrix</h2>
-  <div class="grid" id="grid"></div>
+  <h2>MQTT 127×127 Grid</h2>
   <p>Status: <span id="status">Connecting...</span></p>
+  <div id="grid" class="grid"></div>
 
   <script>
-    const client = mqtt.connect("wss://2557a86661894ebd8ac6bd385c47461d.s1.eu.hivemq.cloud:8883", {
+    const gridSize = 127;
+    const center = Math.floor(gridSize / 2);
+    const gridEl = document.getElementById("grid");
+
+    // Generate grid
+    const cells = [];
+    for (let y = 0; y < gridSize; y++) {
+      for (let x = 0; x < gridSize; x++) {
+        const cell = document.createElement("div");
+        cell.className = "cell";
+
+        // Highlight center axes
+        if (x === center || y === center) {
+          cell.classList.add("axis");
+        }
+
+        gridEl.appendChild(cell);
+        cells.push(cell);
+      }
+    }
+
+    function highlight(x, y) {
+      // Reset previous highlights
+      cells.forEach((c, i) => {
+        const cx = i % gridSize;
+        const cy = Math.floor(i / gridSize);
+        c.classList.toggle("active", x === cx && y === cy);
+      });
+    }
+
+    // MQTT Setup
+    const client = mqtt.connect("2557a86661894ebd8ac6bd385c47461d.s1.eu.hivemq.cloud:8883", {
       username: "mesh0",
       password: "WhoareWe123"
     });
-
-    const gridSize = 10;
-    const grid = document.getElementById("grid");
-
-    for (let i = 0; i < gridSize * gridSize; i++) {
-      const cell = document.createElement("div");
-      cell.className = "cell";
-      grid.appendChild(cell);
-    }
-
-    function highlightCell(x, y) {
-      const index = y * gridSize + x;
-      const cells = document.querySelectorAll(".cell");
-      cells.forEach(c => c.classList.remove("active"));
-      if (cells[index]) cells[index].classList.add("active");
-    }
 
     client.on('connect', () => {
       document.getElementById("status").textContent = "Connected!";
@@ -44,18 +79,18 @@
     });
 
     client.on('message', (topic, message) => {
-      const data = message.toString();
-      console.log("Received:", data);
       try {
-        const { x, y } = JSON.parse(data);
-        highlightCell(x, y);
-      } catch (e) {
-        console.error("Invalid message:", data);
+        const { x, y } = JSON.parse(message.toString());
+        console.log("Received coords:", x, y);
+        highlight(x, y);
+      } catch (err) {
+        console.error("Invalid MQTT payload", err);
       }
     });
 
     client.on('error', err => {
-      document.getElementById("status").textContent = "Error: " + err;
+      document.getElementById("status").textContent = "MQTT Error";
+      console.error(err);
     });
   </script>
 </body>
