@@ -1,115 +1,62 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Interactive XY Matrix with HiveMQ</title>
-    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-    <style>
-        body {
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f0f0f0;
-            font-family: Arial, sans-serif;
-        }
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(127, 1fr);
-            grid-template-rows: repeat(127, 1fr);
-            width: 90vw;
-            height: 90vw;
-            max-width: 500px;
-            max-height: 500px;
-            position: relative;
-            touch-action: none;
-        }
-        .cell {
-            width: 100%;
-            height: 100%;
-            background-color: #e0e0e0;
-            transition: background-color 0.1s;
-        }
-        .active {
-            background-color: #FF0000;
-        }
-        .info {
-            position: fixed;
-            bottom: 20px;
-            font-size: 18px;
-            background: rgba(0, 0, 0, 0.5);
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            left: 50%;
-            transform: translateX(-50%);
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>enoth.mesh</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <style>
+    body { font-family: sans-serif; text-align: center; background: #f4f4f4; }
+    .grid { display: grid; grid-template-columns: repeat(10, 30px); grid-gap: 5px; margin: 50px auto; width: max-content; }
+    .cell { width: 30px; height: 30px; background: #ccc; border-radius: 5px; }
+    .active { background: #4caf50; }
+  </style>
 </head>
 <body>
-    <div class="grid-container" id="grid"></div>
-    <div class="info" id="info">Waiting for coordinates...</div>
+  <h2>MQTT XY Matrix</h2>
+  <div class="grid" id="grid"></div>
+  <p>Status: <span id="status">Connecting...</span></p>
 
-    <script>
-        const gridSize = 127;
-        const grid = document.getElementById("grid");
-        const info = document.getElementById("info");
+  <script>
+    const client = mqtt.connect("wss://2557a86661894ebd8ac6bd385c47461d.s1.eu.hivemq.cloud:8883", {
+      username: "mesh0",
+      password: "WhoareWe123"
+    });
 
-        // MQTT Configuration (replace with your HiveMQ credentials)
-        const brokerUrl = "2557a86661894ebd8ac6bd385c47461d.s1.eu.hivemq.cloud:8884/mqtt"; // WebSocket connection
-        const clientId = "WebClient_" + Math.random().toString(16).substr(2, 8);
-        const client = mqtt.connect(brokerUrl, {
-            username: "mesh0",   // HiveMQ Cloud username
-            password: "123456aA",   // HiveMQ Cloud password
-            clientId: clientId
-        });
+    const gridSize = 10;
+    const grid = document.getElementById("grid");
 
-        client.on("connect", () => {
-            console.log("Connected to HiveMQ Cloud");
-            client.subscribe("coordinates");
-        });
+    for (let i = 0; i < gridSize * gridSize; i++) {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      grid.appendChild(cell);
+    }
 
-        client.on("message", (topic, message) => {
-            const coords = message.toString().split(",");
-            const x = parseInt(coords[0]);
-            const y = parseInt(coords[1]);
-            console.log(`Received coordinates: (${x}, ${y})`);
-            updateGrid(x, y);
-        });
+    function highlightCell(x, y) {
+      const index = y * gridSize + x;
+      const cells = document.querySelectorAll(".cell");
+      cells.forEach(c => c.classList.remove("active"));
+      if (cells[index]) cells[index].classList.add("active");
+    }
 
-        client.on("error", (error) => {
-            console.error("MQTT connection error:", error);
-            info.textContent = "Error connecting to MQTT broker.";
-        });
+    client.on('connect', () => {
+      document.getElementById("status").textContent = "Connected!";
+      client.subscribe("mesh/coords");
+    });
 
-        client.on("offline", () => {
-            console.warn("MQTT client is offline.");
-            info.textContent = "Disconnected from MQTT broker.";
-        });
+    client.on('message', (topic, message) => {
+      const data = message.toString();
+      console.log("Received:", data);
+      try {
+        const { x, y } = JSON.parse(data);
+        highlightCell(x, y);
+      } catch (e) {
+        console.error("Invalid message:", data);
+      }
+    });
 
-        function updateGrid(x, y) {
-            const cells = grid.querySelectorAll('.cell');
-            cells.forEach(cell => {
-                if (parseInt(cell.dataset.x) === x && parseInt(cell.dataset.y) === y) {
-                    cell.classList.add("active");
-                } else {
-                    cell.classList.remove("active");
-                }
-            });
-            info.textContent = `Coordinates: (${x}, ${y})`;
-        }
-
-        // Generate the XY grid
-        for (let y = -63; y <= 63; y++) {
-            for (let x = -63; x <= 63; x++) {
-                const cell = document.createElement("div");
-                cell.classList.add("cell");
-                cell.dataset.x = x;
-                cell.dataset.y = y;
-                grid.appendChild(cell);
-            }
-        }
-    </script>
+    client.on('error', err => {
+      document.getElementById("status").textContent = "Error: " + err;
+    });
+  </script>
 </body>
 </html>
