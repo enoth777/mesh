@@ -2,13 +2,9 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>enoth.m..esh</title>
+  <title>MQTT 127x127 Grid</title>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
-    h2 {
-      color: white;
-      margin-bottom: 10px;
-    }
     body {
       font-family: sans-serif;
       background: #121212;
@@ -17,24 +13,37 @@
       margin: 0;
       padding: 20px;
     }
+
+    h2 {
+      color: white;
+      margin-bottom: 10px;
+    }
+
     .grid {
       display: grid;
       grid-template-columns: repeat(127, 6px);
-/*       grid-gap: 1px; */
+      gap: 0; /* Remove gaps between boxes */
       margin: 20px auto;
       width: fit-content;
-/*       border: 1px solid #ccc; */
     }
+
     .cell {
       width: 6px;
       height: 6px;
-      background: #ccc;
+      background: #333;
     }
+
     .axis {
-      background: #ccc !important;
+      background: #555 !important;
     }
+
     .active {
       background: #4caf50 !important;
+    }
+
+    #status {
+      font-size: 0.9em;
+      color: #aaa;
     }
   </style>
 </head>
@@ -47,26 +56,22 @@
     const gridSize = 127;
     const center = Math.floor(gridSize / 2);
     const gridEl = document.getElementById("grid");
-
-    // Generate grid
     const cells = [];
+
+    // Create grid
     for (let y = 0; y < gridSize; y++) {
       for (let x = 0; x < gridSize; x++) {
         const cell = document.createElement("div");
         cell.className = "cell";
-
-        // Highlight center axes
         if (x === center || y === center) {
           cell.classList.add("axis");
         }
-
         gridEl.appendChild(cell);
         cells.push(cell);
       }
     }
 
     function highlight(x, y) {
-      // Reset previous highlights
       cells.forEach((c, i) => {
         const cx = i % gridSize;
         const cy = Math.floor(i / gridSize);
