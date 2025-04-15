@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
@@ -99,6 +99,106 @@
         console.error("Invalid MQTT payload", err);
       }
     });
+
+    client.on('error', err => {
+      document.getElementById("status").textContent = "MQTT Error";
+      console.error(err);
+    });
+  </script>
+</body>
+</html>
+ -->
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>MQTT 127x127 Grid</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #121212;
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+    h2 {
+      margin-bottom: 10px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(127, 6px);
+      gap: 0;
+      margin: 20px auto;
+      width: fit-content;
+    }
+    .cell {
+      width: 6px;
+      height: 6px;
+      background: #333;
+    }
+    .axis {
+      background: #555 !important;
+    }
+    .active {
+      background: #4caf50 !important;
+    }
+    #status {
+      font-size: 0.9em;
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+  <h2>enoth.mesh..</h2>
+  <p>Status: <span id="status">Connecting...</span></p>
+  <div id="grid" class="grid"></div>
+
+  <script>
+    const gridSize = 127;
+    const center = Math.floor(gridSize / 2);
+    const gridEl = document.getElementById("grid");
+    const cells = [];
+
+    for (let y = 0; y < gridSize; y++) {
+      for (let x = 0; x < gridSize; x++) {
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        if (x === center || y === center) {
+          cell.classList.add("axis");
+        }
+        gridEl.appendChild(cell);
+        cells.push(cell);
+      }
+    }
+
+    function highlight(x, y) {
+      cells.forEach((c, i) => {
+        const cx = i % gridSize;
+        const cy = Math.floor(i / gridSize);
+        c.classList.toggle("active", x === cx && y === cy);
+      });
+    }
+
+    // Connect to test.mosquitto.org over WebSockets
+    const client = mqtt.connect("wss://test.mosquitto.org:8081");
+
+    client.on('connect', () => {
+      document.getElementById("status").textContent = "Connected!";
+      client.subscribe("mesh/coords");
+    });
+
+    let connectedOnce = false;
+
+    client.on('connect', () => {
+      if (!connectedOnce) {
+        document.getElementById("status").textContent = "Connected!";
+        connectedOnce = true;
+      }
+      client.subscribe("mesh/coords");
+    });
+  
 
     client.on('error', err => {
       document.getElementById("status").textContent = "MQTT Error";
