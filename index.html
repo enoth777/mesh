@@ -6,20 +6,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
 
-  <script>
-    let socket = new WebSocket("ws://192.168.4.1:81/");
-    let deviceId = Math.floor(Math.random() * 10000);
-
-    function sendCoord(x, y) {
-    if (socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify({ id: deviceId, x, y }));
-    }
-  }
-
-  socket.onopen = () => console.log("✅ Connected to ESP32");
-  socket.onclose = () => console.log("❌ Disconnected from ESP32");
-  </script>
-
     body {
       background-color: #121212;
       color: #ffffff;
@@ -67,6 +53,18 @@
     const center = Math.floor(gridSize / 2);
     const cells = [];
 
+    let socket = new WebSocket("ws://192.168.4.1:81/");
+    let deviceId = Math.floor(Math.random() * 10000);
+
+    function sendCoord(x, y) {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ id: deviceId, x, y }));
+      }
+    }
+
+socket.onopen = () => console.log("✅ Connected to ESP32");
+socket.onclose = () => console.log("❌ Disconnected from ESP32");
+
     for (let y = 0; y < gridSize; y++) {
       for (let x = 0; x < gridSize; x++) {
         const cell = document.createElement("div");
@@ -88,6 +86,7 @@
       if (x >= 0 && x < gridSize && y >= 0 && y < gridSize) {
         coordsEl.textContent = "X: " + x + ", Y: " + y;
         highlight(x, y);
+        sendCoord(x, y); // 👈 add this
       }
     }
 
