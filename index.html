@@ -2,46 +2,54 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>enoth.messh</title>
+  <title>127x127 Coordinate Grid</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
-      background: #121212;
-      color: white;
-      text-align: center;
+      background-color: #121212;
+      color: #ffffff;
       font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+      padding: 20px;
     }
-
     .grid {
       display: grid;
       grid-template-columns: repeat(127, 6px);
       gap: 0;
-      margin: 20px auto;
-      width: fit-content;
+      user-select: none;
+      touch-action: none;
     }
-
     .cell {
       width: 6px;
       height: 6px;
-      background: #333;
+      background-color: transparent;
     }
-
     .axis {
-      background: #555 !important;
+      background-color: #555;
     }
-
     .active {
-      background: #4caf50 !important;
+      background-color: #4caf50 !important;
+    }
+    #coords {
+      margin-top: 16px;
+      font-size: 18px;
     }
   </style>
 </head>
 <body>
-  <h2>WebSocket 127×127 Grid</h2>
   <div class="grid" id="grid"></div>
+  <div id="coords">X: -, Y: -</div>
 
   <script>
     const gridSize = 127;
-    const center = Math.floor(gridSize / 2);
+    const cellSize = 6;
     const grid = document.getElementById("grid");
+    const coordsEl = document.getElementById("coords");
+    const center = Math.floor(gridSize / 2);
     const cells = [];
 
     for (let y = 0; y < gridSize; y++) {
@@ -51,41 +59,40 @@
         if (x === center || y === center) {
           cell.classList.add("axis");
         }
+        cell.dataset.x = x;
+        cell.dataset.y = y;
         grid.appendChild(cell);
         cells.push(cell);
       }
     }
 
+    function updateCoords(clientX, clientY) {
+      const rect = grid.getBoundingClientRect();
+      const x = Math.floor((clientX - rect.left) / cellSize);
+      const y = Math.floor((clientY - rect.top) / cellSize);
+      if (x >= 0 && x < gridSize && y >= 0 && y < gridSize) {
+        coordsEl.textContent = "X: " + x + ", Y: " + y;
+        highlight(x, y);
+      }
+    }
+
     function highlight(x, y) {
-      cells.forEach((c, i) => {
+      cells.forEach((cell, i) => {
         const cx = i % gridSize;
         const cy = Math.floor(i / gridSize);
-        c.classList.toggle("active", x === cx && y === cy);
+        cell.classList.toggle("active", cx === x && cy === y);
       });
     }
 
-    const socket = new WebSocket("ws://192.168.4.1:81/");
-
-    socket.addEventListener("open", () => {
-      console.log("WebSocket connected");
+    grid.addEventListener("mousemove", (e) => {
+      updateCoords(e.clientX, e.clientY);
     });
 
-    socket.addEventListener("message", (event) => {
-      try {
-        const { x, y } = JSON.parse(event.data);
-        highlight(x, y);
-      } catch (e) {
-        console.error("Invalid message", event.data);
+    grid.addEventListener("touchmove", (e) => {
+      if (e.touches.length > 0) {
+        const touch = e.touches[0];
+        updateCoords(touch.clientX, touch.clientY);
       }
-    });
-
-    grid.addEventListener("click", (e) => {
-      const rect = grid.getBoundingClientRect();
-      const x = Math.floor((e.clientX - rect.left) / 6);
-      const y = Math.floor((e.clientY - rect.top) / 6);
-      const data = JSON.stringify({ x, y });
-      socket.send(data);
-      highlight(x, y);  // optional instant feedback
     });
   </script>
 </body>
