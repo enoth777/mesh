@@ -1,32 +1,324 @@
+// import http from "http";
+// import { WebSocketServer } from "ws";
+
+// const PORT = process.env.PORT || 10000;
+
+// const server = http.createServer((req, res) => {
+//   res.writeHead(200, {
+//     "Content-Type": "text/plain"
+//   });
+
+//   res.end("MESH relay running");
+// });
+
+// const wss = new WebSocketServer({
+//   server
+// });
+
+// wss.on("connection", socket => {
+//   console.log("WebSocket client connected");
+
+//   socket.on("message", message => {
+//     console.log("Received:", message.toString());
+//   });
+
+//   socket.on("close", () => {
+//     console.log("Client disconnected");
+//   });
+// });
+
+// server.listen(PORT, "0.0.0.0", () => {
+//   console.log(`MESH relay running on port ${PORT}`);
+// });
+
 import http from "http";
-import { WebSocketServer } from "ws";
+import { WebSocketServer, WebSocket } from "ws";
 
 const PORT = process.env.PORT || 10000;
 
 const server = http.createServer((req, res) => {
-  res.writeHead(200, {
-    "Content-Type": "text/plain"
-  });
-
+  res.writeHead(200, { "Content-Type": "text/plain" });
   res.end("MESH relay running");
 });
 
-const wss = new WebSocketServer({
-  server
+const wss = new WebSocketServer({ server });
+
+const rooms = new Map();
+
+function getRoom(name) {
+  if (!rooms.has(name)) {
+    rooms.set(name, {
+      esp: null,
+      espLastHeartbeat: 0,
+      browsers: new Map()
+    });
+  }
+
+  return rooms.get(name);
+}
+
+function getFreeSlot(room) {
+  const used = new Set(room.browsers.values());
+
+  for (let i = 1; i <= 8; i++) {
+    if (!used.has(i)) {
+      return i;
+    }
+  }
+
+  return null;
+}
+
+function broadcastEspStatus(room, connected) {
+  const msg = connected ? "E,1" : "E,0";
+
+  for (const ws of room.browsers.keys()) {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(msg);
+    }
+  }
+}
+
+wss.on("connection", (ws, req) => {
+
+  const url = new URL(
+    req.url,
+    `http://${req.headers.host}`
+  );
+
+  if (url.pathname !== "/ws") {
+    ws.close();
+    return;
+  }
+
+  const role =
+    url.searchParams.get("role");
+
+  const roomName =
+    url.searchParams.get("room") || "mesh";
+
+  const room =
+    getRoom(roomName);
+
+
+  // =========================
+  // ESP32
+  // =========================
+
+  if (role === "esp") {
+
+    console.log(
+      `[${roomName}] ESP connected`
+    );
+
+    if (
+      room.esp &&
+      room.esp.readyState === WebSocket.OPEN
+    ) {
+      room.esp.close();
+    }
+
+    room.esp = ws;
+    room.espLastHeartbeat = Date.now();
+
+    broadcastEspStatus(
+      room,
+      true
+    );
+
+    ws.on("message", data => {
+
+      const message =
+        data.toString();
+
+      if (message === "H") {
+        room.espLastHeartbeat =
+          Date.now();
+      }
+    });
+
+    ws.on("close", () => {
+
+      if (room.esp === ws) {
+
+        room.esp = null;
+
+        console.log(
+          `[${roomName}] ESP disconnected`
+        );
+
+        broadcastEspStatus(
+          room,
+          false
+        );
+      }
+    });
+
+    return;
+  }
+
+
+  // =========================
+  // Browser
+  // =========================
+
+  if (role === "browser") {
+
+    const slot =
+      getFreeSlot(room);
+
+    if (slot === null) {
+      ws.send("FULL");
+      ws.close();
+      return;
+    }
+
+    room.browsers.set(
+      ws,
+      slot
+    );
+
+    console.log(
+      `[${roomName}] Device ${slot} connected`
+    );
+
+    ws.send(
+      `S,${slot}`
+    );
+
+    const espOnline =
+      room.esp &&
+      room.esp.readyState === WebSocket.OPEN;
+
+    ws.send(
+      espOnline
+        ? "E,1"
+        : "E,0"
+    );
+
+    ws.on("message", data => {
+
+      const message =
+        data.toString();
+
+      if (
+        !message.startsWith("X,")
+      ) {
+        return;
+      }
+
+      const parts =
+        message.split(",");
+
+      if (parts.length !== 3) {
+        return;
+      }
+
+      let x =
+        Number(parts[1]);
+
+      let y =
+        Number(parts[2]);
+
+      if (
+        !Number.isFinite(x) ||
+        !Number.isFinite(y)
+      ) {
+        return;
+      }
+
+      x = Math.max(
+        0,
+        Math.min(
+          126,
+          Math.round(x)
+        )
+      );
+
+      y = Math.max(
+        0,
+        Math.min(
+          126,
+          Math.round(y)
+        )
+      );
+
+      if (
+        room.esp &&
+        room.esp.readyState === WebSocket.OPEN
+      ) {
+
+        room.esp.send(
+          `X,${slot},${x},${y}`
+        );
+      }
+    });
+
+    ws.on("close", () => {
+
+      room.browsers.delete(ws);
+
+      console.log(
+        `[${roomName}] Device ${slot} disconnected`
+      );
+    });
+
+    return;
+  }
+
+
+  ws.close();
 });
 
-wss.on("connection", socket => {
-  console.log("WebSocket client connected");
 
-  socket.on("message", message => {
-    console.log("Received:", message.toString());
-  });
+// =========================
+// Heartbeat monitor
+// =========================
 
-  socket.on("close", () => {
-    console.log("Client disconnected");
-  });
-});
+setInterval(() => {
 
-server.listen(PORT, "0.0.0.0", () => {
-  console.log(`MESH relay running on port ${PORT}`);
-});
+  const now =
+    Date.now();
+
+  for (
+    const [name, room]
+    of rooms
+  ) {
+
+    if (!room.esp) {
+      continue;
+    }
+
+    if (
+      now -
+      room.espLastHeartbeat >
+      250
+    ) {
+
+      console.log(
+        `[${name}] ESP heartbeat timeout`
+      );
+
+      room.esp.terminate();
+
+      room.esp = null;
+
+      broadcastEspStatus(
+        room,
+        false
+      );
+    }
+  }
+
+}, 50);
+
+
+server.listen(
+  PORT,
+  "0.0.0.0",
+  () => {
+    console.log(
+      `MESH relay running on port ${PORT}`
+    );
+  }
+);
