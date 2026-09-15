@@ -157,126 +157,329 @@ wss.on("connection", (ws, req) => {
   // Browser
   // =========================
 
-  if (role === "browser") {
+  // if (role === "browser") {
 
-    const slot =
-      getFreeSlot(room);
+  //   const slot =
+  //     getFreeSlot(room);
 
-    if (slot === null) {
-      ws.send("FULL");
-      ws.close();
-      return;
-    }
+  //   if (slot === null) {
+  //     ws.send("FULL");
+  //     ws.close();
+  //     return;
+  //   }
 
-    room.browsers.set(ws, {
-      slot: slot, 
-      lastHeartbeat: Date.now()
-    });
+  //   room.browsers.set(ws, {
+  //     slot: slot, 
+  //     lastHeartbeat: Date.now()
+  //   });
 
-    broadcastClientCount(room);
+  //   broadcastClientCount(room);
 
-    console.log(
-      `[${roomName}] Device ${slot} connected`
-    );
+  //   console.log(
+  //     `[${roomName}] Device ${slot} connected`
+  //   );
 
-    ws.send(
-      `S,${slot}`
-    );
+  //   ws.send(
+  //     `S,${slot}`
+  //   );
 
-    const espOnline =
-      room.esp &&
-      room.esp.readyState === WebSocket.OPEN;
+  //   const espOnline =
+  //     room.esp &&
+  //     room.esp.readyState === WebSocket.OPEN;
 
-    ws.send(
-      espOnline
-        ? "E,1"
-        : "E,0"
-    );
+  //   ws.send(
+  //     espOnline
+  //       ? "E,1"
+  //       : "E,0"
+  //   );
 
-    ws.on("message", data => {
+  //   ws.on("message", data => {
 
 
-      const message = data.toString();
-      // ========================= Browser heartbeat ========================
-      if (message === "P") {
-        const browser = room.browsers.get(ws);
+  //     const message = data.toString();
+  //     // ========================= Browser heartbeat ========================
+  //     if (message === "P") {
+  //       const browser = room.browsers.get(ws);
 
-        if (browser) {
-          browser.lastHeartbeat = Date.now();
+  //       if (browser) {
+  //         browser.lastHeartbeat = Date.now();
 
-          console.log(
-            `[${roomName}] Device ${browser.slot} heartbeat`
+  //         console.log(
+  //           `[${roomName}] Device ${browser.slot} heartbeat`
+  //         );
+  //       }
+
+  //       return;
+  //     }
+
+  //     // ========================= Ignore anything except coordinates ========================
+  //     if (!message.startsWith("X,")) {
+  //       return;
+  //     }
+
+  //     const parts = message.split(",");
+
+  //     if (parts.length !== 3) {
+  //       return;
+  //     }
+
+  //     let x =
+  //       Number(parts[1]);
+
+  //     let y =
+  //       Number(parts[2]);
+
+  //     if (
+  //       !Number.isFinite(x) ||
+  //       !Number.isFinite(y)
+  //     ) {
+  //       return;
+  //     }
+
+  //     x = Math.max(
+  //       0,
+  //       Math.min(
+  //         126,
+  //         Math.round(x)
+  //       )
+  //     );
+
+  //     y = Math.max(
+  //       0,
+  //       Math.min(
+  //         126,
+  //         Math.round(y)
+  //       )
+  //     );
+
+  //     if (
+  //       room.esp &&
+  //       room.esp.readyState === WebSocket.OPEN
+  //     ) {
+
+  //       room.esp.send(
+  //         `X,${slot},${x},${y}`
+  //       );
+  //     }
+  //   });
+
+  //   ws.on("close", () => {
+
+  //     room.browsers.delete(ws);
+
+  //     broadcastClientCount(room);
+
+  //     console.log(
+  //       `[${roomName}] Device ${slot} disconnected`
+  //     );
+  //   });
+
+  //   return;
+  // }
+
+// =========================
+// Browser
+// =========================
+
+    if (role === "browser") {
+
+      let registered = false;
+      let slot = null;
+
+      ws.on("message", data => {
+
+        const message = data.toString();
+
+        // =========================
+        // Registration
+        // =========================
+
+        if (!registered) {
+
+          if (!message.startsWith("HELLO,")) {
+            return;
+          }
+
+          const deviceId =
+            message.substring(6).trim();
+
+          if (!deviceId) {
+            ws.close();
+            return;
+          }
+
+          // Look for an existing connection
+          // from this same browser tab.
+          let oldSocket = null;
+          let oldBrowser = null;
+
+          for (
+            const [existingWs, browser]
+            of room.browsers
+          ) {
+            if (browser.id === deviceId) {
+              oldSocket = existingWs;
+              oldBrowser = browser;
+              break;
+            }
+          }
+
+          // Same tab reconnecting / refreshing:
+          // keep its existing slot.
+          if (oldBrowser) {
+
+            slot = oldBrowser.slot;
+
+            // Remove BEFORE terminating so the
+            // old close handler cannot affect
+            // the new connection.
+            room.browsers.delete(oldSocket);
+
+            oldSocket.terminate();
+
+            console.log(
+              `[${roomName}] Device ${slot} reconnected`
+            );
+          }
+
+          // Completely new tab/device:
+          // allocate a free slot.
+          else {
+
+            slot = getFreeSlot(room);
+
+            if (slot === null) {
+              ws.send("FULL");
+              ws.close();
+              return;
+            }
+
+            console.log(
+              `[${roomName}] Device ${slot} connected`
+            );
+          }
+
+          room.browsers.set(ws, {
+            slot: slot,
+            id: deviceId,
+            lastHeartbeat: Date.now()
+          });
+
+          registered = true;
+
+          ws.send(
+            `S,${slot}`
           );
+
+          const espOnline =
+            room.esp &&
+            room.esp.readyState === WebSocket.OPEN;
+
+          ws.send(
+            espOnline
+              ? "E,1"
+              : "E,0"
+          );
+
+          broadcastClientCount(room);
+
+          return;
         }
 
-        return;
-      }
 
-      // ========================= Ignore anything except coordinates ========================
-      if (!message.startsWith("X,")) {
-        return;
-      }
+        // =========================
+        // Browser heartbeat
+        // =========================
 
-      const parts = message.split(",");
+        if (message === "P") {
 
-      if (parts.length !== 3) {
-        return;
-      }
+          const browser =
+            room.browsers.get(ws);
 
-      let x =
-        Number(parts[1]);
+          if (browser) {
+            browser.lastHeartbeat =
+              Date.now();
+          }
 
-      let y =
-        Number(parts[2]);
+          return;
+        }
 
-      if (
-        !Number.isFinite(x) ||
-        !Number.isFinite(y)
-      ) {
-        return;
-      }
 
-      x = Math.max(
-        0,
-        Math.min(
-          126,
-          Math.round(x)
-        )
-      );
+        // =========================
+        // Coordinates
+        // =========================
 
-      y = Math.max(
-        0,
-        Math.min(
-          126,
-          Math.round(y)
-        )
-      );
+        if (!message.startsWith("X,")) {
+          return;
+        }
 
-      if (
-        room.esp &&
-        room.esp.readyState === WebSocket.OPEN
-      ) {
+        const parts =
+          message.split(",");
 
-        room.esp.send(
-          `X,${slot},${x},${y}`
+        if (parts.length !== 3) {
+          return;
+        }
+
+        let x =
+          Number(parts[1]);
+
+        let y =
+          Number(parts[2]);
+
+        if (
+          !Number.isFinite(x) ||
+          !Number.isFinite(y)
+        ) {
+          return;
+        }
+
+        x = Math.max(
+          0,
+          Math.min(
+            126,
+            Math.round(x)
+          )
         );
-      }
-    });
 
-    ws.on("close", () => {
+        y = Math.max(
+          0,
+          Math.min(
+            126,
+            Math.round(y)
+          )
+        );
 
-      room.browsers.delete(ws);
+        if (
+          room.esp &&
+          room.esp.readyState === WebSocket.OPEN
+        ) {
 
-      broadcastClientCount(room);
+          room.esp.send(
+            `X,${slot},${x},${y}`
+          );
+        }
+      });
 
-      console.log(
-        `[${roomName}] Device ${slot} disconnected`
-      );
-    });
 
-    return;
-  }
+      ws.on("close", () => {
 
+        // Important:
+        // only remove this socket if it is
+        // still registered.
+        if (room.browsers.has(ws)) {
+
+          room.browsers.delete(ws);
+
+          console.log(
+            `[${roomName}] Device ${slot} disconnected`
+          );
+
+          broadcastClientCount(room);
+        }
+      });
+
+      return;
+    }
 
   ws.close();
 });
