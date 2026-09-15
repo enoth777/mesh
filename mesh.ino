@@ -10,7 +10,7 @@ WebSocketsClient webSocket;
 bool relayConnected = false;
 
 unsigned long lastHeartbeat = 0;
-const unsigned long HEARTBEAT_INTERVAL = 20;
+const unsigned long HEARTBEAT_INTERVAL = 2000;
 
 void forgetWifi() {
   Serial.println("Forgetting saved WiFi credentials...");

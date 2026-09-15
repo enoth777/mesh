@@ -1,36 +1,3 @@
-// import http from "http";
-// import { WebSocketServer } from "ws";
-
-// const PORT = process.env.PORT || 10000;
-
-// const server = http.createServer((req, res) => {
-//   res.writeHead(200, {
-//     "Content-Type": "text/plain"
-//   });
-
-//   res.end("MESH relay running");
-// });
-
-// const wss = new WebSocketServer({
-//   server
-// });
-
-// wss.on("connection", socket => {
-//   console.log("WebSocket client connected");
-
-//   socket.on("message", message => {
-//     console.log("Received:", message.toString());
-//   });
-
-//   socket.on("close", () => {
-//     console.log("Client disconnected");
-//   });
-// });
-
-// server.listen(PORT, "0.0.0.0", () => {
-//   console.log(`MESH relay running on port ${PORT}`);
-// });
-
 import http from "http";
 import { WebSocketServer, WebSocket } from "ws";
 
@@ -58,8 +25,10 @@ function getRoom(name) {
 }
 
 function getFreeSlot(room) {
-  const used = new Set(room.browsers.values());
 
+  const used = new Set(
+    [...room.browsers.values()].map(browser => browser.slot)
+  );
   for (let i = 1; i <= 8; i++) {
     if (!used.has(i)) {
       return i;
@@ -173,10 +142,10 @@ wss.on("connection", (ws, req) => {
       return;
     }
 
-    room.browsers.set(
-      ws,
-      slot
-    );
+    room.browsers.set(ws, {
+      slot: slot, 
+      lastHeartbeat: Date.now()
+    });
 
     console.log(
       `[${roomName}] Device ${slot} connected`
@@ -198,17 +167,23 @@ wss.on("connection", (ws, req) => {
 
     ws.on("message", data => {
 
-      const message =
-        data.toString();
 
-      if (
-        !message.startsWith("X,")
-      ) {
+      const message = data.toString();
+      // ========================= Browser heartbeat ========================
+      if (message === "P") {
+        const browser = room.browsers.get(ws);
+        if (browser) {
+          browser.lastHeartbeat = Date.now();
+        }
+        
+        return;
+      }
+      // ========================= Ignore anything except coordinates ========================
+      if (!message.startsWith("X,")) {
         return;
       }
 
-      const parts =
-        message.split(",");
+      const parts = message.split(",");
 
       if (parts.length !== 3) {
         return;
@@ -285,14 +260,10 @@ setInterval(() => {
     of rooms
   ) {
 
-    if (!room.esp) {
-      continue;
-    }
 
     if (
       now -
-      room.espLastHeartbeat >
-      250
+      room.espLastHeartbeat > 6000
     ) {
 
       console.log(
@@ -308,7 +279,23 @@ setInterval(() => {
         false
       );
     }
+
+  for (const [ws, browser] of room.browsers) {
+
+    if (now - browser.lastHeartbeat > 6000) {
+
+      console.log(
+        `[${name}] Device ${browser.slot} heartbeat timeout`
+      );
+
+      room.browsers.delete(ws);
+      ws.terminate();
+    }
   }
+
+  }
+
+
 
 }, 50);
 
