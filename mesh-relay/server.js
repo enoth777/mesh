@@ -288,14 +288,11 @@ wss.on("connection", (ws, req) => {
 
 setInterval(() => {
 
-  const now =
-    Date.now();
+  const now = Date.now();
 
-  for (
-    const [name, room]
-    of rooms
-  ) {
+  for (const [name, room] of rooms) {
 
+    // ESP heartbeat
     const esp = room.esp;
 
     if (
@@ -306,12 +303,10 @@ setInterval(() => {
         `[${name}] ESP heartbeat timeout`
       );
 
-      // Clear the reference first
       if (room.esp === esp) {
         room.esp = null;
       }
 
-      // Then terminate the socket we captured
       esp.terminate();
 
       broadcastEspStatus(
@@ -320,25 +315,25 @@ setInterval(() => {
       );
     }
 
-    }
+    // Browser heartbeats
+    for (const [ws, browser] of room.browsers) {
 
-  for (const [ws, browser] of room.browsers) {
+      if (
+        now - browser.lastHeartbeat > 6000
+      ) {
+        console.log(
+          `[${name}] Device ${browser.slot} heartbeat timeout`
+        );
 
-    if (now - browser.lastHeartbeat > 6000) {
+        room.browsers.delete(ws);
+        ws.terminate();
 
-      console.log(
-        `[${name}] Device ${browser.slot} heartbeat timeout`
-      );
-
-      room.browsers.delete(ws);
-      broadcastClientCount(room);
-      ws.terminate();
+        broadcastClientCount(room);
+      }
     }
   }
 
-
 }, 50);
-
 
 server.listen(
   PORT,
