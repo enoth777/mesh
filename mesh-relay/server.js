@@ -166,6 +166,7 @@ wss.on("connection", (ws, req) => {
 
     });
 
+
     ws.on("close", () => {
 
       if (room.browsers.has(ws)) {
@@ -500,20 +501,37 @@ wss.on("connection", (ws, req) => {
       });
 
 
+      // ws.on("close", () => {
+
+      //   // Important:
+      //   // only remove this socket if it is
+      //   // still registered.
+      //   if (room.browsers.has(ws)) {
+
+      //     room.browsers.delete(ws);
+
+      //     console.log(
+      //       `[${roomName}] Device ${slot} disconnected`
+      //     );
+
+      //     broadcastClientCount(room);
+      //   }
+      // });
+
       ws.on("close", () => {
 
-        // Important:
-        // only remove this socket if it is
-        // still registered.
-        if (room.browsers.has(ws)) {
+        if (room.esp === ws) {
 
-          room.browsers.delete(ws);
+          room.esp = null;
 
           console.log(
-            `[${roomName}] Device ${slot} disconnected`
+            `[${roomName}] ESP disconnected`
           );
 
-          broadcastClientCount(room);
+          broadcastEspStatus(
+            room,
+            false
+          );
         }
       });
 
