@@ -44,32 +44,98 @@ void updateLed() {
   }
 }
 
+// void webSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
+//   switch (type) {
+//     case WStype_CONNECTED:
+//       relayConnected = true;
+//       Serial.println();
+//       Serial.println("MESH relay connected.");
+//       break;
+
+//     case WStype_DISCONNECTED:
+//       relayConnected = false;
+//       Serial.println();
+//       Serial.println("MESH relay disconnected.");
+//       break;
+
+//     case WStype_TEXT: {
+//       char message[64];
+
+//       size_t copyLength = min(length, sizeof(message) - 1);
+//       memcpy(message, payload, copyLength);
+//       message[copyLength] = '\0';
+
+//       int device;
+//       int x;
+//       int y;
+
+//       if (sscanf(message, "X,%d,%d,%d", &device, &x, &y) == 3) {
+//         if (
+//           device >= 1 && device <= 8 &&
+//           x >= 0 && x <= 126 &&
+//           y >= 0 && y <= 126
+//         ) {
+//           Serial.printf(
+//             "Device %d | X: %3d | Y: %3d\n",
+//             device,
+//             x,
+//             y
+//           );
+//         }
+//       }
+
+//       break;
+//     }
+
+//     default:
+//       break;
+//   }
+// }
+
 void webSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
+
   switch (type) {
+
     case WStype_CONNECTED:
       relayConnected = true;
-      Serial.println();
       Serial.println("MESH relay connected.");
       break;
 
     case WStype_DISCONNECTED:
       relayConnected = false;
-      Serial.println();
       Serial.println("MESH relay disconnected.");
+      break;
+
+    case WStype_ERROR:
+      relayConnected = false;
+      Serial.println("MESH WebSocket ERROR.");
       break;
 
     case WStype_TEXT: {
       char message[64];
 
-      size_t copyLength = min(length, sizeof(message) - 1);
+      size_t copyLength =
+        min(length, sizeof(message) - 1);
+
       memcpy(message, payload, copyLength);
       message[copyLength] = '\0';
+
+      Serial.print("Relay message: ");
+      Serial.println(message);
 
       int device;
       int x;
       int y;
 
-      if (sscanf(message, "X,%d,%d,%d", &device, &x, &y) == 3) {
+      if (
+        sscanf(
+          message,
+          "X,%d,%d,%d",
+          &device,
+          &x,
+          &y
+        ) == 3
+      ) {
         if (
           device >= 1 && device <= 8 &&
           x >= 0 && x <= 126 &&
