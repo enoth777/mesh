@@ -493,10 +493,19 @@ wss.on("connection", (ws, req) => {
           room.esp &&
           room.esp.readyState === WebSocket.OPEN
         ) {
+          
+          const browser = 
+            room.browsers.get(ws);
 
-          room.esp.send(
-            `X,${slot},${x},${y}`
-          );
+          if (
+              browser && 
+              room.esp &&
+              room.esp.readyState === WebSocket.OPEN
+          ) {
+            room.esp.send(
+              `X,${browser.slot},${x},${y}`
+            );
+          }
         }
       });
 
