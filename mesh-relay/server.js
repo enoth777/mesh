@@ -48,6 +48,40 @@ function broadcastEspStatus(room, connected) {
   }
 }
 
+function compactDeviceSlots(room) {
+
+  // Preserve the current ordering by slot.
+  const browsers =
+    [...room.browsers.entries()]
+      .sort(
+        (a, b) =>
+          a[1].slot - b[1].slot
+      );
+
+  let newSlot = 1;
+
+  for (const [ws, browser] of browsers) {
+
+    if (browser.slot !== newSlot) {
+
+      console.log(
+        `Device ${browser.slot} reassigned to ${newSlot}`
+      );
+
+      browser.slot = newSlot;
+
+      if (
+        ws.readyState === WebSocket.OPEN
+      ) {
+        ws.send(`S,${newSlot}`);
+      }
+    }
+
+    newSlot++;
+  }
+}
+
+
 function broadcastClientCount(room) {
 
   const msg =
@@ -134,18 +168,23 @@ wss.on("connection", (ws, req) => {
 
     ws.on("close", () => {
 
-      if (room.esp === ws) {
+      if (room.browsers.has(ws)) {
 
-        room.esp = null;
+        const browser =
+          room.browsers.get(ws);
+
+        const disconnectedSlot =
+          browser.slot;
+
+        room.browsers.delete(ws);
 
         console.log(
-          `[${roomName}] ESP disconnected`
+          `[${roomName}] Device ${disconnectedSlot} disconnected`
         );
 
-        broadcastEspStatus(
-          room,
-          false
-        );
+        compactDeviceSlots(room);
+
+        broadcastClientCount(room);
       }
     });
 
@@ -529,7 +568,10 @@ setInterval(() => {
         );
 
         room.browsers.delete(ws);
+
         ws.terminate();
+
+        compactDeviceSlots(room);
 
         broadcastClientCount(room);
       }
