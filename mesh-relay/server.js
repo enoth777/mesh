@@ -121,10 +121,15 @@ wss.on("connection", (ws, req) => {
       const message =
         data.toString();
 
-      if (message === "H") {
-        room.espLastHeartbeat =
-          Date.now();
-      }
+    if (message === "H") {
+
+      room.espLastHeartbeat = Date.now();
+
+      console.log(
+        `[${roomName}] ESP heartbeat received`
+      );
+    }
+
     });
 
     ws.on("close", () => {
@@ -291,24 +296,30 @@ setInterval(() => {
     of rooms
   ) {
 
+    const esp = room.esp;
 
     if (
-      now -
-      room.espLastHeartbeat > 6000
+      esp &&
+      now - room.espLastHeartbeat > 6000
     ) {
-
       console.log(
         `[${name}] ESP heartbeat timeout`
       );
 
-      room.esp.terminate();
+      // Clear the reference first
+      if (room.esp === esp) {
+        room.esp = null;
+      }
 
-      room.esp = null;
+      // Then terminate the socket we captured
+      esp.terminate();
 
       broadcastEspStatus(
         room,
         false
       );
+    }
+
     }
 
   for (const [ws, browser] of room.browsers) {
