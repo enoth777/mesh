@@ -120,6 +120,29 @@ void webSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
 //   Serial.println(WiFi.localIP());
 // }
 
+void startWifiSetup() {
+  Serial.println();
+  Serial.println("Starting WiFi setup...");
+
+  WiFiManager wm;
+
+  bool connected = wm.startConfigPortal(
+    "MESH-SETUP",
+    "12345678"
+  );
+
+  if (!connected) {
+    Serial.println("WiFi setup failed.");
+    return;
+  }
+
+  Serial.println("WiFi configured.");
+  Serial.println("Restarting...");
+
+  delay(1000);
+  ESP.restart();
+}
+
 void connectWifi() {
   WiFi.mode(WIFI_STA);
 
@@ -191,6 +214,10 @@ void loop() {
 
   if (command.equalsIgnoreCase("forget")) {
     forgetWifi();
+  }
+
+  if (command.equalsIgnoreCase("setup")) {
+    startWifiSetup();
   }
   }
 
