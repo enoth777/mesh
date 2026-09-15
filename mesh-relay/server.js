@@ -48,6 +48,27 @@ function broadcastEspStatus(room, connected) {
   }
 }
 
+function broadcastClientCount(room) {
+
+  const msg =
+    `C,${room.browsers.size}`;
+
+  // Send count to all browsers
+  for (const ws of room.browsers.keys()) {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(msg);
+    }
+  }
+
+  // Send count to ESP
+  if (
+    room.esp &&
+    room.esp.readyState === WebSocket.OPEN
+  ) {
+    room.esp.send(msg);
+  }
+}
+
 wss.on("connection", (ws, req) => {
 
   const url = new URL(
@@ -147,6 +168,8 @@ wss.on("connection", (ws, req) => {
       lastHeartbeat: Date.now()
     });
 
+    broadcastClientCount(room);
+
     console.log(
       `[${roomName}] Device ${slot} connected`
     );
@@ -233,6 +256,8 @@ wss.on("connection", (ws, req) => {
 
       room.browsers.delete(ws);
 
+      broadcastClientCount(room);
+
       console.log(
         `[${roomName}] Device ${slot} disconnected`
       );
@@ -289,6 +314,7 @@ setInterval(() => {
       );
 
       room.browsers.delete(ws);
+      broadcastClientCount(room);
       ws.terminate();
     }
   }
