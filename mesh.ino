@@ -92,22 +92,55 @@ void webSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
   }
 }
 
+// void connectWifi() {
+//   WiFi.mode(WIFI_STA);
+
+//   WiFiManager wm;
+
+//   Serial.println("Connecting to WiFi...");
+
+//   bool connected = wm.autoConnect(
+//     "MESH-SETUP",
+//     "12345678"
+//   );
+
+//   if (!connected) {
+//     Serial.println("WiFi setup failed.");
+//     delay(2000);
+//     ESP.restart();
+//   }
+
+//   Serial.println();
+//   Serial.println("Connected to existing WiFi.");
+
+//   Serial.print("SSID: ");
+//   Serial.println(WiFi.SSID());
+
+//   Serial.print("IP: ");
+//   Serial.println(WiFi.localIP());
+// }
+
 void connectWifi() {
   WiFi.mode(WIFI_STA);
 
-  WiFiManager wm;
+  Serial.println("Connecting to saved WiFi...");
 
-  Serial.println("Connecting to WiFi...");
+  WiFi.begin();
 
-  bool connected = wm.autoConnect(
-    "MESH-SETUP",
-    "12345678"
-  );
+  unsigned long start = millis();
 
-  if (!connected) {
-    Serial.println("WiFi setup failed.");
-    delay(2000);
-    ESP.restart();
+  while (
+    WiFi.status() != WL_CONNECTED &&
+    millis() - start < 15000
+  ) {
+    delay(250);
+    Serial.print(".");
+  }
+
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println();
+    Serial.println("WiFi connection failed.");
+    return;
   }
 
   Serial.println();

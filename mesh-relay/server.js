@@ -195,12 +195,18 @@ wss.on("connection", (ws, req) => {
       // ========================= Browser heartbeat ========================
       if (message === "P") {
         const browser = room.browsers.get(ws);
+
         if (browser) {
           browser.lastHeartbeat = Date.now();
+
+          console.log(
+            `[${roomName}] Device ${browser.slot} heartbeat`
+          );
         }
-        
+
         return;
       }
+
       // ========================= Ignore anything except coordinates ========================
       if (!message.startsWith("X,")) {
         return;

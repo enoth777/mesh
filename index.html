@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -81,6 +82,10 @@
     Device: -
   </div>
 
+  <div id="deviceCount">  
+    Connecred devices: 0
+  </div>
+
   <script>
     const gridSize = 127;
     const cellSize = 6;
@@ -89,6 +94,7 @@
     const coordsEl = document.getElementById("coords");
     const statusEl = document.getElementById("status");
     const deviceEl = document.getElementById("device");
+    const deviceCountEl = document.getElementById("deviceCount");
 
     const center = Math.floor(gridSize / 2);
     const cells = [];
@@ -111,16 +117,15 @@
 
     function getDeviceId() {
 
-      let id = localStorage.getItem("meshDeviceId");
+      let id = sessionStorage.getItem("meshDeviceId");
 
       if (!id) {
         id = crypto.randomUUID();
-        localStorage.setItem("meshDeviceId", id);
+        sessionStorage.setItem("meshDeviceId", id);
       }
 
-        return id;
+      return id;
     }
-
     const DEVICE_ID = getDeviceId();
 
     let heartbeatTimer = null;
@@ -146,10 +151,20 @@
       }, 2000);
     };
 
-      socket.onmessage = (event) => {
+      socket.on= (event) => {
 
         const msg = event.data;
 
+        if (msg.startsWith("C,")) {
+
+          const count =
+            Number(msg.split(",")[1]);
+
+          deviceCountEl.textContent =
+            "Connected devices: " + count;
+
+          return;
+        }
 
         if (msg.startsWith("S,")) {
 
