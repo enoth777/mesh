@@ -225,14 +225,42 @@ socket.onclose = () => console.log("❌ Disconnected from ESP32");
       "https://mesh-relay.onrender.com/ws?role=browser&room=mesh";
 
 
+    function getDeviceId() {
+
+      let id = localStorage.getItem("meshDeviceId");
+
+      if (!id) {
+        id = crypto.randomUUID();
+        localStorage.setItem("meshDeviceId", id);
+      }
+
+        return id;
+    }
+
+    const DEVICE_ID = getDeviceId();
+
+    let heartbeatTimer = null;
+
     function connectMesh() {
 
       socket = new WebSocket(RELAY_URL);
 
-      socket.onopen = () => {
-        console.log("Connected to MESH relay");
-      };
+      // socket.onopen = () => {
+      //   console.log("Connected to MESH relay");
+      // };
 
+
+      socket.onopen = () => {
+      console.log("Connected to MESH relay");
+
+      socket.send(`HELLO,${DEVICE_ID}`);
+
+      heartbeatTimer = setInterval(() => {
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.send("P");
+        }
+      }, 2000);
+    };
 
       socket.onmessage = (event) => {
 
@@ -290,22 +318,35 @@ socket.onclose = () => console.log("❌ Disconnected from ESP32");
       };
 
 
+      // socket.onclose = () => {
+
+      //   espConnected = false;
+
+      //   statusEl.textContent =
+      //     "○ Relay disconnected";
+
+      //   statusEl.className =
+      //     "disconnected";
+
+      //   setTimeout(
+      //     connectMesh,
+      //     1000
+      //   );
+      // };
+
       socket.onclose = () => {
+        if (heartbeatTimer) {
+          clearInterval(heartbeatTimer);
+          heartbeatTimer = null;
+        }
 
         espConnected = false;
 
-        statusEl.textContent =
-          "○ Relay disconnected";
+        statusEl.textContent = "○ Relay disconnected";
+        statusEl.className = "disconnected";
 
-        statusEl.className =
-          "disconnected";
-
-        setTimeout(
-          connectMesh,
-          1000
-        );
+        setTimeout(connectMesh, 1000);
       };
-
 
       socket.onerror = (error) => {
 
