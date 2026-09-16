@@ -27,9 +27,15 @@ function getRoom(name) {
 function getFreeSlot(room) {
 
   const used = new Set(
-    [...room.browsers.values()].map(browser => browser.slot)
+    [...room.browsers.values()]
+      .map(browser => browser.slot)
   );
-  for (let i = 1; i <= 8; i++) {
+
+  for (
+    let i = 1;
+    i <= MAX_DEVICES;
+    i++
+  ) {
     if (!used.has(i)) {
       return i;
     }
@@ -362,6 +368,24 @@ wss.on("connection", (ws, req) => {
               oldBrowser = browser;
               break;
             }
+          }
+
+          const existingBrowser =
+            [...room.browsers.values()]
+              .find(browser => browser.id === deviceId);
+
+          if (
+            !existingBrowser &&
+            room.browsers.size >= MAX_DEVICES
+          ) {
+            console.log(
+              `[${roomName}] Connection rejected: room full`
+            );
+
+            ws.send("FULL");
+            ws.close();
+
+            return;
           }
 
           // Same tab reconnecting / refreshing:
