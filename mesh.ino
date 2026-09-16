@@ -1,6 +1,8 @@
 #include <WiFi.h>
 #include <WiFiManager.h>
 #include <WebSocketsClient.h>
+#include <MeshCommands.h>
+
 
 const char* RELAY_HOST = "mesh-relay.onrender.com";
 const char* RELAY_PATH = "/ws?role=esp&room=mesh";
@@ -304,33 +306,6 @@ void webSocketEvent(
 }
 
 
-// void connectWifi() {
-//   WiFi.mode(WIFI_STA);
-
-//   WiFiManager wm;
-
-//   Serial.println("Connecting to WiFi...");
-
-//   bool connected = wm.autoConnect(
-//     "MESH-SETUP",
-//     "12345678"
-//   );
-
-//   if (!connected) {
-//     Serial.println("WiFi setup failed.");
-//     delay(2000);
-//     ESP.restart();
-//   }
-
-//   Serial.println();
-//   Serial.println("Connected to existing WiFi.");
-
-//   Serial.print("SSID: ");
-//   Serial.println(WiFi.SSID());
-
-//   Serial.print("IP: ");
-//   Serial.println(WiFi.localIP());
-// }
 
 void startWifiSetup() {
   Serial.println();
@@ -418,20 +393,11 @@ void setup() {
   setupRelay();
 }
 
+
 void loop() {
-  // -------Serial Commands -------------
-  if (Serial.available()) {
-  String command = Serial.readStringUntil('\n');
-  command.trim();
 
-  if (command.equalsIgnoreCase("forget")) {
-    forgetWifi();
-  }
-
-  if (command.equalsIgnoreCase("setup")) {
-    startWifiSetup();
-  }
-  }
+  //------------- Handle Serial Commands ----------
+  handleSerialCommands();
 
 
   //-------------WiFI STatus ---------------
@@ -462,3 +428,4 @@ void loop() {
 
   updateLed();
 }
+
