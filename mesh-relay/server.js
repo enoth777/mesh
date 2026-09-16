@@ -45,6 +45,8 @@ function getFreeSlot(room) {
   return null;
 }
 
+
+
 function broadcastEspStatus(room, connected) {
   const msg = connected ? "E,1" : "E,0";
 
@@ -87,6 +89,8 @@ function compactDeviceSlots(room) {
     newSlot++;
   }
 }
+
+
 
 
 function broadcastClientCount(room) {
@@ -176,24 +180,25 @@ wss.on("connection", (ws, req) => {
 
     ws.on("close", () => {
 
-      if (room.browsers.has(ws)) {
-
-        const browser =
-          room.browsers.get(ws);
-
-        const disconnectedSlot =
-          browser.slot;
-
-        room.browsers.delete(ws);
-
-        console.log(
-          `[${roomName}] Device ${disconnectedSlot} disconnected`
-        );
-
-        compactDeviceSlots(room);
-
-        broadcastClientCount(room);
+      if (!room.browsers.has(ws)) {
+        return;
       }
+
+      const browser =
+        room.browsers.get(ws);
+
+      const disconnectedSlot =
+        browser.slot;
+
+      room.browsers.delete(ws);
+
+      console.log(
+        `[${roomName}] Device ${disconnectedSlot} disconnected`
+      );
+
+      compactDeviceSlots(room);
+
+      broadcastClientCount(room);
     });
 
     return;
@@ -359,6 +364,7 @@ wss.on("connection", (ws, req) => {
           // from this same browser tab.
           let oldSocket = null;
           let oldBrowser = null;
+          let shortId = null;
 
           for (
             const [existingWs, browser]
@@ -394,16 +400,13 @@ wss.on("connection", (ws, req) => {
           if (oldBrowser) {
 
             slot = oldBrowser.slot;
+            shortId = oldBrowser.shortId;
 
-            // Remove BEFORE terminating so the
-            // old close handler cannot affect
-            // the new connection.
             room.browsers.delete(oldSocket);
-
             oldSocket.terminate();
 
             console.log(
-              `[${roomName}] Device ${slot} reconnected`
+              `[${roomName}] Device ${slot} (${shortId}) reconnected`
             );
           }
 
@@ -419,17 +422,20 @@ wss.on("connection", (ws, req) => {
               return;
             }
 
+            shortId = createShortId();
+
             console.log(
-              `[${roomName}] Device ${slot} connected`
+              `[${roomName}] Device ${slot} (${shortId}) connected`
             );
           }
+          
 
           room.browsers.set(ws, {
             slot: slot,
             id: deviceId,
+            shortId: shortId,
             lastHeartbeat: Date.now()
           });
-
           registered = true;
 
           ws.send(
