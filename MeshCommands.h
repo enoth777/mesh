@@ -2,5 +2,6 @@
 #define MESH_COMMANDS_H
 
 void handleSerialCommands();
+void updateSerialMonitor();
 
 #endif
