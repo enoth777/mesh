@@ -25,6 +25,15 @@ function getRoom(name) {
   return rooms.get(name);
 }
 
+function createShortId() {
+  return Math.floor(
+    Math.random() * 0x10000
+  )
+    .toString(16)
+    .toUpperCase()
+    .padStart(4, "0");
+}
+
 function getFreeSlot(room) {
 
   const used = new Set(
