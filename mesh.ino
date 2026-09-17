@@ -114,6 +114,37 @@ void webSocketEvent(
       int x;
       int y;
 
+      int identityDevice;
+      char identityShortId[5];
+
+      if (
+        sscanf(
+          message,
+          "I,%d,%4s",
+          &identityDevice,
+          identityShortId
+        ) == 2
+      ) {
+        if (
+          identityDevice >= 1 &&
+          identityDevice <= MESH_MAX_DEVICES
+        ) {
+          setMeshDeviceIdentity(
+            identityDevice,
+            String(identityShortId)
+          );
+
+          Serial.printf(
+            "Device %d identity: %s\n",
+            identityDevice,
+            identityShortId
+          );
+        }
+
+        break;
+      }
+
+
       if (
         sscanf(
           message,

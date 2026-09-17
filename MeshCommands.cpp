@@ -8,8 +8,7 @@
 bool stateMonitorActive = false;
 unsigned long lastStateRefresh = 0;
 
-constexpr unsigned long STATE_REFRESH_INTERVAL = 250;
-
+unsigned long stateRefreshInterval = 250;
 
 void printMeshState() {
 
@@ -77,7 +76,14 @@ void printMeshState() {
 
     Serial.print("ACTIVE   ");
 
-    Serial.print("X=");
+    if (device.shortId.length() > 0) {
+      Serial.print(device.shortId);
+    }
+    else {
+      Serial.print("----");
+    }
+
+    Serial.print("   X=");
     Serial.print(device.x);
 
     Serial.print("   Y=");
@@ -104,7 +110,7 @@ void updateSerialMonitor() {
 
   if (
     now - lastStateRefresh <
-    STATE_REFRESH_INTERVAL
+    stateRefreshInterval
   ) {
     return;
   }
@@ -187,19 +193,51 @@ void handleSerialCommands() {
   // /state 
   // =========================
 
-   if (
-        command.equalsIgnoreCase("/state")
-        ) {
-        stateMonitorActive = true;
+  if (
+    command.equalsIgnoreCase("/state") ||
+    command.startsWith("/state ")
+  ) {
+    unsigned long requestedInterval = 250;
 
-        Serial.println();
-        Serial.println("Live state monitor started.");
-        Serial.println("Type /exit to stop.");
+    if (command.length() > 6) {
+      String argument =
+        command.substring(7);
 
-        // printMeshState();
+      argument.trim();
 
+      long parsedInterval =
+        argument.toInt();
+
+      if (parsedInterval >= 20) {
+        requestedInterval =
+          parsedInterval;
+      }
+      else {
+        Serial.println(
+          "Invalid refresh rate. Minimum is 20 ms."
+        );
         return;
+      }
     }
+
+    stateRefreshInterval =
+      requestedInterval;
+
+    stateMonitorActive = true;
+    lastStateRefresh = 0;
+
+    Serial.println();
+    Serial.print(
+      "Live state monitor started at "
+    );
+    Serial.print(stateRefreshInterval);
+    Serial.println(" ms.");
+    Serial.println(
+      "Type /exit to stop."
+    );
+
+    return;
+  }
 
   // =========================  
   // /exit
