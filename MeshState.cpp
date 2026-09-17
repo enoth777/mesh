@@ -15,13 +15,23 @@ void setMeshDeviceIdentity(
     return;
   }
 
-  MeshDevice& d =
-    meshDevices[device - 1];
+MeshDevice& d =
+  meshDevices[device - 1];
 
-  d.shortId = shortId;
-  d.active = true;
+// A different participant has taken this channel.
+// Do not let it inherit the previous participant's state.
+if (
+  d.shortId.length() > 0 &&
+  d.shortId != shortId
+) {
+  d.x = 0;
+  d.y = 0;
+  d.lastUpdate = 0;
 }
+d.shortId = shortId;
+d.active = true;
 
+};
 
 void updateMeshDevice(
   int device,

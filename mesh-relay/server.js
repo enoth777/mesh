@@ -106,6 +106,25 @@ function compactDeviceSlots(room) {
   }
 
 
+  for (const browser of room.browsers.values()) {
+    sendDeviceIdentity(
+      room,
+      browser
+    );
+
+    if (
+      browser.x !== null &&
+      browser.y !== null &&
+      room.esp &&
+      room.esp.readyState === WebSocket.OPEN
+    ) {
+      room.esp.send(
+        `X,${browser.slot},${browser.x},${browser.y}`
+      );
+    }
+  }
+
+
 }
 
 function sendDeviceIdentity(room, browser) {
@@ -353,7 +372,9 @@ wss.on("connection", (ws, req) => {
             slot: slot,
             id: deviceId,
             shortId: shortId,
-            lastHeartbeat: Date.now()
+            lastHeartbeat: Date.now(),
+            x: null,
+            y: null
           });
           registered = true;
 
@@ -436,32 +457,30 @@ wss.on("connection", (ws, req) => {
           )
         );
 
-        y = Math.max(
-          0,
-          Math.min(
-            126,
-            Math.round(y)
-          )
-        );
+      y = Math.max(
+        0,
+        Math.min(
+          126,
+          Math.round(y)
+        )
+      );
+
+      const browser = room.browsers.get(ws);
+
+      if (browser) {
+        browser.x = x;
+        browser.y = y;
 
         if (
           room.esp &&
           room.esp.readyState === WebSocket.OPEN
         ) {
-          
-          const browser = 
-            room.browsers.get(ws);
-
-          if (
-              browser && 
-              room.esp &&
-              room.esp.readyState === WebSocket.OPEN
-          ) {
-            room.esp.send(
-              `X,${browser.slot},${x},${y}`
-            );
-          }
+          room.esp.send(
+            `X,${browser.slot},${x},${y}`
+          );
         }
+      }
+
       });
 
 
