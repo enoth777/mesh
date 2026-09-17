@@ -12,6 +12,9 @@ unsigned long stateRefreshInterval = 250;
 
 void printMeshState() {
 
+  Serial.print("\033[2J");  // Clear screen
+  Serial.print("\033[H");   // Move cursor to top-left
+
   Serial.println();
   Serial.println("MESH STATE");
   Serial.println("----------------------------");
@@ -152,11 +155,11 @@ void handleSerialCommands() {
     Serial.println();
     Serial.println("MESH COMMANDS");
     Serial.println("----------------------------");
-    Serial.println("/help      Show available commands");
-    Serial.println("/setup     Start WiFi setup");
-    Serial.println("/forget    Forget saved WiFi");
-    Serial.println("/state     Show live state monitor");
-    Serial.println("/exit      Stop live state monitor");
+    Serial.println("/help         Show available commands");
+    Serial.println("/setup        Start WiFi setup");
+    Serial.println("/forget       Forget saved WiFi");
+    Serial.println("/state [ms]   Show live state monitor (default 250 ms, minimum 20 ms)");
+    Serial.println("/exit         Stop live state monitor");
     Serial.println();
 
     return;

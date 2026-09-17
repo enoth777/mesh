@@ -1,0 +1,22 @@
+/help                                   Show available commands
+
+
+/setup                                  Start ESP setup
+    Here I want to be able to address connected users:
+        - which user at which output should go 
+        - to be able to dephase them
+        - to be able to throw out connected devices
+
+
+/wifi                                   Start wifi setup
+    -manual [SSID] [PASSWORD]           Manually enter SSID and PASSWORD for a known network. throws error
+                                        if captive portal is being prompted; if so, -capture is suggested
+        -capture [USERNAME] [PASSWORD]  Sends USERNAME ("-" is default) and PASSWORD ("-" is default) to
+                                        the captive portal
+    -idle                               Go into network idle mode. 
+    -reconnect                          Reconnects to current network, first saving credentials
+    -forget                             Disconnects from current network
+
+
+/state                                  Displays information about ESP and network
+    [ms]                                Sets refresh rate 
