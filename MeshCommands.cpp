@@ -4,11 +4,58 @@
 #include "MeshCommands.h"
 #include "MeshWifi.h"
 #include "MeshState.h"
+#include "MeshIdentity.h"
 
 bool stateMonitorActive = false;
 unsigned long lastStateRefresh = 0;
 
 unsigned long stateRefreshInterval = 250;
+
+
+
+
+void printMeshInfo() {
+  Serial.println();
+  Serial.println("MESH INFO");
+  Serial.println("----------------------------");
+
+  Serial.println("Firmware:    0.1.0-dev");
+  Serial.println("Hardware:    XIAO ESP32-C6");
+
+  Serial.print("Unit ID:     ");
+  Serial.println(getMeshHardwareId());
+
+  Serial.print("Capacity:    ");
+  Serial.println(MESH_MAX_DEVICES);
+
+  Serial.print("WiFi:        ");
+  Serial.println(
+    WiFi.status() == WL_CONNECTED
+      ? "connected"
+      : "disconnected"
+  );
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.print("SSID:        ");
+    Serial.println(WiFi.SSID());
+
+    Serial.print("IP:          ");
+    Serial.println(WiFi.localIP());
+
+    Serial.print("RSSI:        ");
+    Serial.print(WiFi.RSSI());
+    Serial.println(" dBm");
+  }
+
+  Serial.print("Uptime:      ");
+  Serial.print(millis() / 1000);
+  Serial.println(" s");
+
+  Serial.println();
+}
+
+
+
 
 void printMeshState() {
 
@@ -103,6 +150,9 @@ void printMeshState() {
   Serial.println();
 }
 
+
+
+
 void updateSerialMonitor() {
 
   if (!stateMonitorActive) {
@@ -120,155 +170,322 @@ void updateSerialMonitor() {
 
   lastStateRefresh = now;
 
-  
-  Serial.print("\033[2J");
-  Serial.print("\033[H");
   printMeshState();
 }
 
-void handleSerialCommands() {
-
-  // Nothing received through Serial
-  if (!Serial.available()) {
-    return;
-  }
-
-  // Read command
-  String command =
-    Serial.readStringUntil('\n');
-
-  command.trim();
-
-  // Ignore empty input
-  if (command.length() == 0) {
-    return;
-  }
 
 
-  // =========================
-  // /help
-  // =========================
 
-  if (
-    command.equalsIgnoreCase("/help")
-  ) {
-    Serial.println();
-    Serial.println("MESH COMMANDS");
-    Serial.println("----------------------------");
-    Serial.println("/help         Show available commands");
-    Serial.println("/setup        Start WiFi setup");
-    Serial.println("/forget       Forget saved WiFi");
-    Serial.println("/state [ms]   Show live state monitor (default 250 ms, minimum 20 ms)");
-    Serial.println("/exit         Stop live state monitor");
-    Serial.println();
+  void handleSerialCommands() {
 
-    return;
-  }
-
-
-  // =========================
-  // /setup
-  // =========================
-
-  if (
-    command.equalsIgnoreCase("/setup")
-  ) {
-    startWifiSetup();
-
-    return;
-  }
-
-
-  // =========================
-  // /forget
-  // =========================
-
-  if (
-    command.equalsIgnoreCase("/forget")
-  ) {
-    forgetWifi();
-
-    return;
-  }
-  
-
-  // =========================
-  // /state 
-  // =========================
-
-  if (
-    command.equalsIgnoreCase("/state") ||
-    command.startsWith("/state ")
-  ) {
-    unsigned long requestedInterval = 250;
-
-    if (command.length() > 6) {
-      String argument =
-        command.substring(7);
-
-      argument.trim();
-
-      long parsedInterval =
-        argument.toInt();
-
-      if (parsedInterval >= 20) {
-        requestedInterval =
-          parsedInterval;
-      }
-      else {
-        Serial.println(
-          "Invalid refresh rate. Minimum is 20 ms."
-        );
-        return;
-      }
+    // Nothing received through Serial
+    if (!Serial.available()) {
+      return;
     }
 
-    stateRefreshInterval =
-      requestedInterval;
+    // Read command
+    String command =
+      Serial.readStringUntil('\n');
 
-    stateMonitorActive = true;
-    lastStateRefresh = 0;
+    command.trim();
 
-    Serial.println();
-    Serial.print(
-      "Live state monitor started at "
-    );
-    Serial.print(stateRefreshInterval);
-    Serial.println(" ms.");
-    Serial.println(
-      "Type /exit to stop."
-    );
+    // Ignore empty input
+    if (command.length() == 0) {
+      return;
+    }
 
-    return;
+    executeMeshCommand(command);
   }
 
-  // =========================  
-  // /exit
-  // =========================
+  void executeMeshCommand(const String& command) {
+
+
+    // =========================
+    // /info
+    // =========================  
+    if (
+      command.equalsIgnoreCase("/info")
+    ) {
+      printMeshInfo();
+      return;
+    }
+
+    // =========================
+    // /help
+    // =========================
 
     if (
-    command.equalsIgnoreCase("/exit")
+      command.equalsIgnoreCase("/help")
     ) {
-    stateMonitorActive = false;
+      Serial.println();
+      Serial.println("MESH COMMANDS");
+      Serial.println("----------------------------");
+      Serial.println("/help         Show available commands");
+      Serial.println("/info         Display MESH system information");
+      Serial.println("/setup        Start WiFi setup");
+      Serial.println("/forget       Forget saved WiFi");
+      Serial.println("/state [ms]   Show live state monitor (default 250 ms, minimum 20 ms)");
+      Serial.println("/exit         Stop live state monitor");
+      Serial.println();
 
-    Serial.println();
-    Serial.println("Live state monitor stopped.");
+      return;
+    } 
 
-    return;
+
+    // =========================
+    // /setup
+    // =========================
+
+    if (command.equalsIgnoreCase("/setup")) { 
+      startWifiSetup();
+
+      return;
+    }
+
+    // =========================
+    // /forget
+    // =========================
+
+    if (command.equalsIgnoreCase("/forget")) { 
+      forgetWifi();
+
+      return;
+    }
+  
+
+    // =========================
+    // /state
+    // =========================
+
+    if (
+      command.equalsIgnoreCase("/state") ||
+      command.startsWith("/state ")
+    ) {
+      unsigned long requestedInterval = 250;
+
+      if (command.length() > 6) {
+        String argument =
+          command.substring(7);
+
+        argument.trim();
+
+        long parsedInterval =
+          argument.toInt();
+
+        if (parsedInterval >= 20) {
+          requestedInterval =
+            parsedInterval;
+        }
+        else {
+          Serial.println(
+            "Invalid refresh rate. Minimum is 20 ms."
+          );
+          return;
+        }
+      }
+
+      stateRefreshInterval =
+        requestedInterval;
+
+      stateMonitorActive = true;
+      lastStateRefresh = 0;
+
+      Serial.println();
+      Serial.print(
+        "Live state monitor started at "
+      );
+      Serial.print(stateRefreshInterval);
+      Serial.println(" ms.");
+      Serial.println(
+        "Type /exit to stop."
+      );
+
+      return;
+    }
+
+   
+
+
+    // =========================  
+    // /exit
+    // =========================
+    if (
+      command.equalsIgnoreCase("/exit")
+    ) {
+      stateMonitorActive = false;
+
+      Serial.println();
+      Serial.println("Live state monitor stopped.");
+
+      return;
     }
 
 
-  // =========================
-  // Unknown command
-  // =========================
 
-  Serial.print(
-    "Unknown command: "
-  );
+    // =========================
+    // Unknown command
+    // =========================
+    Serial.print("Unknown command: ");
 
-  Serial.println(command);
+    Serial.println(command);
+    Serial.println("Type /help for available commands.");
+  
+  }
 
-  Serial.println(
-    "Type /help for available commands."
-  );
-}
+
+
+// void handleSerialCommands() {
+
+  
+//   // Nothing received through Serial
+//   if (!Serial.available()) {
+//     return;
+//   }
+
+//   // Read command
+//   String command =
+//     Serial.readStringUntil('\n');
+
+//   command.trim();
+
+//   // Ignore empty input
+//   if (command.length() == 0) {
+//     return;
+//   }
+
+
+//   if (
+//     command.equalsIgnoreCase("/info")
+//   ) {
+//     printMeshInfo();
+//     return;
+//   }
+
+//   // =========================
+//   // /help
+//   // =========================
+
+//   if (
+//     command.equalsIgnoreCase("/help")
+//   ) {
+//     Serial.println();
+//     Serial.println("MESH COMMANDS");
+//     Serial.println("----------------------------");
+//     Serial.println("/help         Show available commands");
+//     Serial.println("/info         Display MESH system information");
+//     Serial.println("/setup        Start WiFi setup");
+//     Serial.println("/forget       Forget saved WiFi");
+//     Serial.println("/state [ms]   Show live state monitor (default 250 ms, minimum 20 ms)");
+//     Serial.println("/exit         Stop live state monitor");
+//     Serial.println();
+
+//     return;
+//   }
+
+
+//   // =========================
+//   // /setup
+//   // =========================
+
+//   if (
+//     command.equalsIgnoreCase("/setup")
+//   ) {
+//     startWifiSetup();
+
+//     return;
+//   }
+
+
+//   // =========================
+//   // /forget
+//   // =========================
+
+//   if (
+//     command.equalsIgnoreCase("/forget")
+//   ) {
+//     forgetWifi();
+
+//     return;
+//   }
+  
+
+//   // =========================
+//   // /state 
+//   // =========================
+
+//   if (
+//     command.equalsIgnoreCase("/state") ||
+//     command.startsWith("/state ")
+//   ) {
+//     unsigned long requestedInterval = 250;
+
+//     if (command.length() > 6) {
+//       String argument =
+//         command.substring(7);
+
+//       argument.trim();
+
+//       long parsedInterval =
+//         argument.toInt();
+
+//       if (parsedInterval >= 20) {
+//         requestedInterval =
+//           parsedInterval;
+//       }
+//       else {
+//         Serial.println(
+//           "Invalid refresh rate. Minimum is 20 ms."
+//         );
+//         return;
+//       }
+//     }
+
+//     stateRefreshInterval =
+//       requestedInterval;
+
+//     stateMonitorActive = true;
+//     lastStateRefresh = 0;
+
+//     Serial.println();
+//     Serial.print(
+//       "Live state monitor started at "
+//     );
+//     Serial.print(stateRefreshInterval);
+//     Serial.println(" ms.");
+//     Serial.println(
+//       "Type /exit to stop."
+//     );
+
+//     return;
+//   }
+
+//   // =========================  
+//   // /exit
+//   // =========================
+
+//     if (
+//     command.equalsIgnoreCase("/exit")
+//     ) {
+//     stateMonitorActive = false;
+
+//     Serial.println();
+//     Serial.println("Live state monitor stopped.");
+
+//     return;
+//     }
+
+
+//   // =========================
+//   // Unknown command
+//   // =========================
+
+//   Serial.print(
+//     "Unknown command: "
+//   );
+
+//   Serial.println(command);
+
+//   Serial.println(
+//     "Type /help for available commands."
+//   );
+// }

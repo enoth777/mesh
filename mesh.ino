@@ -1,9 +1,11 @@
 #include <WiFi.h>
 #include <WiFiManager.h>
 #include <WebSocketsClient.h>
+
 #include "MeshCommands.h"
 #include "MeshState.h"
 #include "MeshWifi.h"
+#include "MeshIdentity.h"
 
 const char* RELAY_HOST = "mesh-relay.onrender.com";
 const char* RELAY_PATH = "/ws?role=esp&room=mesh";
@@ -236,6 +238,11 @@ void setup() {
   Serial.println("======================");
   Serial.println("        MESH");
   Serial.println("======================");
+
+  Serial.printf(
+    "Hardware ID: %s\n",
+    getMeshHardwareId().c_str()
+  );
 
   connectWifi();
   setupRelay();
