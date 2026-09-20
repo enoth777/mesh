@@ -1,4 +1,5 @@
 #include "MeshState.h"
+#include "MeshOutput.h"
 
 MeshDevice meshDevices[MESH_MAX_DEVICES];
 
@@ -52,4 +53,10 @@ void updateMeshDevice(
   d.x = x;
   d.y = y;
   d.lastUpdate = millis();
+
+  //Temporary: X controls the output
+  setMeshOutput(
+    device,
+    x
+  );
 }
