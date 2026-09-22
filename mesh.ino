@@ -6,6 +6,7 @@
 #include "MeshState.h"
 #include "MeshWifi.h"
 #include "MeshIdentity.h"
+#include "MeshOutput.h"
 
 const char* RELAY_HOST = "mesh-relay.onrender.com";
 const char* RELAY_PATH = "/ws?role=esp&room=mesh";
@@ -98,6 +99,12 @@ void webSocketEvent(
           i < MESH_MAX_DEVICES;
           i++
         ) {
+          if (meshDisconnectMode == MeshDisconnectMode::ZERO) {
+            setMeshOutput(
+              i + 1,
+              0
+            );
+          }
           if (i >= meshConnectedDevices) {
             meshDevices[i].active = false;
           }

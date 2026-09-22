@@ -229,7 +229,8 @@ void updateSerialMonitor() {
       Serial.println("/forget ..........................Forget saved WiFi");
       Serial.println("/state [ms] ......................Show live state monitor (default 250 ms, minimum 20 ms)");
       Serial.println("/exit ............................Stop live state monitor");
-      Serial.println("/output disconnect [hold|zero] ...Show or set disconnect mode");
+      Serial.println("/output disconnect [hold|zero] ...Show or set disconnect mode");  
+      Serial.println("..................................hold: keep last value, zero: set to 0");
 
       return;
     } 
