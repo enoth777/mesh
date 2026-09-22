@@ -3,7 +3,7 @@
 #include "MeshOutput.h"
 
 
-MeshDisconnectMode meshDisconnectMode = MeshDisconnectMode::HOLD;
+extern MeshDisconnectMode meshDisconnectMode = MeshDisconnectMode::HOLD;
 
 int meshCoordinateToDac(
     int coordinate

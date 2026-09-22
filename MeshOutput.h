@@ -17,7 +17,7 @@ void setMeshOutput(
 enum class MeshDisconnectMode {
   HOLD,
   ZERO
-}
+};
 
 extern MeshDisconnectMode meshDisconnectMode;
 
