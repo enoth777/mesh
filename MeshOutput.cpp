@@ -23,6 +23,33 @@ int meshCoordinateToDac(
     );
 }
 
+void setMeshOutputRaw(
+    int channel,
+    int dacValue
+) {
+    if (
+        channel < 1 ||
+        channel > MESH_MAX_OUTPUTS
+    ) {
+        Serial.printf(
+            "Invalid channel: %d\n",
+            channel
+        );
+        return;
+    }
+
+    dacValue = constrain( // Constrain DAC value to valid range
+        dacValue,
+        0,
+        MESH_MAX_DAC
+    );
+
+    // Temporary fake DAC output  
+    Serial.print("OUT");
+    Serial.print(channel);
+    Serial.print("   DAC=");
+    Serial.println(dacValue);
+}
 
 void setMeshOutput(
     int channel,
@@ -31,13 +58,18 @@ void setMeshOutput(
     int dacValue = meshCoordinateToDac(coordinate);
 
 
-    //temporary workaround for DAC output on ESP32-C6
-    Serial.print("OUT");
-    Serial.print(channel);
-    Serial.print("   X=");
-    Serial.print(coordinate);
-    Serial.print("   DAC=");
-    Serial.println(dacValue);
+    setMeshOutputRaw(
+        channel,
+        dacValue
+    );
+
+    // //temporary workaround for DAC output on ESP32-C6
+    // Serial.print("OUT");
+    // Serial.print(channel);
+    // Serial.print("   X=");
+    // Serial.print(coordinate);
+    // Serial.print("   DAC=");
+    // Serial.println(dacValue);
 }
 
 

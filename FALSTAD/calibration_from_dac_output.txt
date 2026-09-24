@@ -1,0 +1,11 @@
+1. DAC OUTPUT is 0 to -4.096
+2. signal is sent to inverting opamp
+3. BIAS of (4.096/2 = )2.048V is sent to the noninverting input
+
+
+
+
+
+        The signal from the DAC is in the range of 0 to -4.096V. it is then 
+    sent to the (-) of an inverting amplifier with 2.5V gain. The (+) is
+    fed with a BIAS voltage of 1.47V, to achieve a +-5V at output.
